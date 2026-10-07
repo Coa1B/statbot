@@ -2,9 +2,11 @@
 
 A sports stats search engine in the style of StatMuse. Ask a question in plain English, like *"Jokic vs Embiid rebounds 2025-26"*, and get a one-sentence answer with a supporting stats table, built from live ESPN data.
 
-Beyond search, the home page shows today's scores, games in progress and league leaders, and every game has its own page with a live Gamecast and ESPN-style box score.
+Beyond search, the home page shows today's scores, games in progress and league leaders. Each league has its own page with scores, standings and stat leaders, and every game has its own page with a live Gamecast and ESPN-style box score.
 
 Covers the NBA, WNBA, NFL, MLB, NHL, college football and men's college basketball.
+
+**Live site:** https://statbot-dun.vercel.app
 
 ## Getting started
 
@@ -51,6 +53,14 @@ Stat names, synonyms and their ESPN fields live in `lib/stat-defs.ts`, one line 
 - **Live now**: a scoreboard row for every game in progress (NFL, MLB, NBA, WNBA, NHL) with the status, team records, the score by period (R/H/E for baseball) and a detail panel: the current pitcher and batter for baseball, each team's leading scorer for basketball, the passing, rushing and receiving leaders for football, and the most recent play for hockey (or whenever the others aren't available). It refreshes every 30 seconds while the tab is open.
 - **League leaders**: three leaderboards per sport, with headshots and team logos. Click a board to run that question, or a player to see their stats.
 
+## League pages
+
+Each league has its own page, linked from the top navigation: `/nba`, `/nfl`, `/mlb`, `/nhl` and `/wnba`.
+
+- **Scores**: every game for a day (or an NFL week) as a scoreboard row, with arrows to step through days or weeks. Scheduled games show the start time and, for baseball, the probable pitchers; finished games show the decisions (baseball) or top scorers; live games refresh every 30 seconds.
+- **Standings**: conference or league tables with team logos and the columns ESPN uses for each sport (for example GP, W, L, OTL, PTS for hockey; W, L, PCT, GB for basketball and baseball).
+- **Stats**: eight leaderboards per league, such as points, rebounds and assists for basketball or home runs, ERA and saves for baseball.
+
 ## Game pages
 
 Every game has a page at `/game/<league>/<espn-event-id>`, for example `/game/mlb/401908015`. While a game is live, the page refreshes every 15 seconds.
@@ -69,6 +79,10 @@ Every game has a page at `/game/<league>/<espn-event-id>`, for example `/game/ml
 app/
   page.tsx                      Home page (server): loads scores, leaders and live games
   statbot.tsx                   Home page and search UI (client)
+  [league]/page.tsx             League page: Scores, Standings and Stats tabs
+  components.tsx                Shared scoreboard rows and leaderboards
+  site-header.tsx               Top navigation with search and league links
+  auto-refresh.tsx              Refreshes server-rendered pages while games are live
   layout.tsx, globals.css       Root layout and all styles
   game/[league]/[id]/
     page.tsx                    Game page (server)
@@ -84,9 +98,20 @@ lib/
   home.ts                       Home page data (today's games, leaderboards)
   live.ts                       Live games and in-game leaders
   game.ts                       Game page data (box score, play-by-play, situation, win probability)
+  league.ts                     League page data (scores by day or week, standings, stat leaders)
   logos.ts                      ESPN league and team logo URLs
   types.ts                      Shared answer and event types
 ```
+
+## Deploying
+
+The app deploys to [Vercel](https://vercel.com) with no configuration or environment variables. With the [Vercel CLI](https://vercel.com/docs/cli) signed in, run this from the project folder:
+
+```bash
+vercel deploy --prod
+```
+
+Or import the GitHub repository at [vercel.com/new](https://vercel.com/new) to deploy automatically on every push.
 
 ## Data and caching
 

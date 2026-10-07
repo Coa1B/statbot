@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FeedGroup, GameData, GameSituation, GameTeam } from "@/lib/game";
 import { leagueLogo } from "@/lib/logos";
+import { SiteHeader } from "../../../site-header";
 
 const LIVE_REFRESH_MS = 15_000;
 const PRE_REFRESH_MS = 60_000;
@@ -61,21 +62,7 @@ export default function GameView({ initial }: { initial: GameData }) {
 
   return (
     <div className="site">
-      <header className="nav">
-        <div className="container nav-inner">
-          <a className="brand" href="/">
-            <span className="brand-mark" />
-            StatBot
-          </a>
-          <form className="search search-compact" action="/">
-            <svg className="search-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3.5-3.5" />
-            </svg>
-            <input name="q" placeholder="Search stats" aria-label="Ask a sports stats question" />
-          </form>
-        </div>
-      </header>
+      <SiteHeader active={game.league} />
 
       <main>
         <Scoreboard game={game} />

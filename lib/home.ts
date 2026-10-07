@@ -66,7 +66,9 @@ async function games(): Promise<HomeGame[]> {
     .slice(0, 14);
 }
 
-async function board(cfg: (typeof BOARDS)[number]): Promise<HomeBoard | null> {
+export type BoardConfig = { league: string; stat: string; sort: string; question: string };
+
+export async function board(cfg: BoardConfig): Promise<HomeBoard | null> {
   const data: any = await espn.leagueLeaders(cfg.league, cfg.sort, undefined, undefined, 5);
   if (data.error || !data.rows?.length) return null;
   const vi = (data.columns as string[]).indexOf(cfg.sort.split(".")[1].split(":")[0]);

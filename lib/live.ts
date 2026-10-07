@@ -32,6 +32,7 @@ export type LiveTeam = {
 export type LiveGame = {
   id: string;
   league: string;
+  state: "pre" | "in" | "post";
   status: string;
   situation?: string;
   periods: string[];
@@ -53,9 +54,10 @@ const FOOTBALL_LEADERS = [
   { name: "receivingYards", label: "Receiving" },
 ];
 
-async function scoreboard(league: string) {
+/** ESPN scoreboard for a league; `query` is e.g. "dates=20261006" or "week=3&seasontype=2". */
+export async function scoreboard(league: string, query = "") {
   const sport = LEAGUES[league];
-  const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/scoreboard`, {
+  const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/scoreboard${query ? `?${query}` : ""}`, {
     next: { revalidate: 15 },
   });
   if (!res.ok) throw new Error(`ESPN scoreboard failed (${res.status})`);
@@ -106,8 +108,81 @@ function lastPlay(comp: any, status: string, teams: Record<string, any>): LiveDe
   };
 }
 
-function detail(sport: string, comp: any, status: string, teams: Record<string, any>): LiveDetail | undefined {
+function awayFirst(comp: any): any[] {
+  return [...(comp.competitors ?? [])].sort((a: any, b: any) => (a.homeAway === "away" ? -1 : b.homeAway === "away" ? 1 : 0));
+}
+
+/** Each team's leader in one in-game category, e.g. points. */
+function teamLeaders(comp: any, category: string, unit: string): LivePerson[] {
+  return awayFirst(comp).flatMap((c: any): LivePerson[] => {
+    const top = c.leaders?.find((l: any) => l.name === category)?.leaders?.[0];
+    if (!top?.athlete) return [];
+    const value = String(top.displayValue ?? "");
+    return [
+      {
+        id: top.athlete.id,
+        name: top.athlete.displayName,
+        image: headshot(top.athlete),
+        team: c.team?.abbreviation,
+        teamLogo: c.team?.logo,
+        line: /^\d+$/.test(value) ? `${value} ${unit}` : value,
+      },
+    ];
+  });
+}
+
+function scheduledDetail(sport: string, comp: any): LiveDetail | undefined {
+  if (sport !== "baseball") return undefined;
+  const people = awayFirst(comp).flatMap((c: any): LivePerson[] => {
+    const p = c.probables?.[0];
+    if (!p?.athlete) return [];
+    return [
+      {
+        id: p.athlete.id,
+        name: p.athlete.displayName,
+        image: headshot(p.athlete),
+        team: c.team?.abbreviation,
+        teamLogo: c.team?.logo,
+        line: p.record?.replace(/^\(|\)$/g, ""),
+      },
+    ];
+  });
+  return people.length ? { kind: "players", title: "Probable pitchers", people } : undefined;
+}
+
+function finalDetail(sport: string, comp: any, teams: Record<string, any>): LiveDetail | undefined {
+  if (sport === "baseball") {
+    const labels: Record<string, string> = { winningPitcher: "Win", losingPitcher: "Loss", savingPitcher: "Save" };
+    const people = (comp.status?.featuredAthletes ?? [])
+      .filter((f: any) => labels[f.name] && f.athlete)
+      .map((f: any): LivePerson => {
+        const team = teams[f.athlete.team?.id ?? f.team?.id];
+        return {
+          id: f.athlete.id,
+          label: labels[f.name],
+          name: f.athlete.displayName,
+          image: headshot(f.athlete),
+          team: team?.abbreviation,
+          teamLogo: team?.logo,
+        };
+      });
+    return people.length ? { kind: "players", title: "Decisions", people } : undefined;
+  }
+  if (sport === "basketball") {
+    const people = teamLeaders(comp, "points", "PTS");
+    return people.length ? { kind: "players", title: "Top scorers", people } : undefined;
+  }
+  if (sport === "hockey") {
+    const people = teamLeaders(comp, "points", "PTS");
+    return people.length ? { kind: "players", title: "Top performers", people } : undefined;
+  }
+  return undefined;
+}
+
+function detail(sport: string, comp: any, status: string, teams: Record<string, any>, state: string): LiveDetail | undefined {
   const sit = comp.situation;
+  if (state === "pre") return scheduledDetail(sport, comp);
+  if (state === "post" && sport !== "football") return finalDetail(sport, comp, teams);
 
   if (sport === "baseball") {
     const people = [
@@ -132,21 +207,7 @@ function detail(sport: string, comp: any, status: string, teams: Record<string, 
   }
 
   if (sport === "basketball") {
-    const awayFirst = [...(comp.competitors ?? [])].sort((a: any, b: any) => (a.homeAway === "away" ? -1 : b.homeAway === "away" ? 1 : 0));
-    const people = awayFirst.flatMap((c: any): LivePerson[] => {
-      const top = c.leaders?.find((l: any) => l.name === "points")?.leaders?.[0];
-      if (!top?.athlete) return [];
-      return [
-        {
-          id: top.athlete.id,
-          name: top.athlete.displayName,
-          image: headshot(top.athlete),
-          team: c.team?.abbreviation,
-          teamLogo: c.team?.logo,
-          line: `${top.displayValue} PTS`,
-        },
-      ];
-    });
+    const people = teamLeaders(comp, "points", "PTS");
     return people.length ? { kind: "players", title: "Leading scorers", people } : lastPlay(comp, status, teams);
   }
 
@@ -173,10 +234,17 @@ function detail(sport: string, comp: any, status: string, teams: Record<string, 
   return lastPlay(comp, status, teams);
 }
 
-function liveGame(league: string, e: any): LiveGame {
+function startTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" }) + " ET";
+}
+
+/** One scoreboard row for any game: scheduled, in progress or final. */
+export function scoreRow(league: string, e: any): LiveGame {
   const sport = LEAGUES[league];
   const comp = e.competitions?.[0] ?? {};
-  const status = e.status?.type?.shortDetail ?? e.status?.type?.detail ?? "";
+  const state: LiveGame["state"] = e.status?.type?.state ?? "pre";
+  const scheduled = state === "pre" && !/postponed|canceled|delayed/i.test(e.status?.type?.detail ?? "");
+  const status = scheduled ? startTime(e.date) : (e.status?.type?.shortDetail ?? e.status?.type?.detail ?? "");
   const teamsById: Record<string, any> = {};
   for (const c of comp.competitors ?? []) teamsById[c.team?.id] = c.team;
 
@@ -192,20 +260,23 @@ function liveGame(league: string, e: any): LiveGame {
       score: c.score ?? "0",
       record: total ? (split ? `${total}, ${split} ${side === "home" ? "Home" : "Away"}` : total) : undefined,
       linescores: (c.linescores ?? []).map((l: any) => l.displayValue ?? String(l.value ?? "")),
-      totals: sport === "baseball" ? [c.score ?? "0", String(c.hits ?? 0), String(c.errors ?? 0)] : [c.score ?? "0"],
+      totals:
+        state === "pre" ? [] : sport === "baseball" ? [c.score ?? "0", String(c.hits ?? 0), String(c.errors ?? 0)] : [c.score ?? "0"],
     };
   });
 
   return {
     id: e.id,
     league,
+    state,
     status,
-    situation: sport === "baseball" ? baseballSituation(comp.situation, status) : comp.situation?.downDistanceText,
+    situation:
+      state !== "in" ? undefined : sport === "baseball" ? baseballSituation(comp.situation, status) : comp.situation?.downDistanceText,
     // Nine innings don't fit a compact row, so baseball shows R/H/E only, like ESPN's scoreboard.
-    periods: sport === "baseball" ? [] : periodLabels(sport, Math.max(...teams.map((t) => t.linescores.length))),
-    totalLabels: sport === "baseball" ? ["R", "H", "E"] : ["T"],
+    periods: sport === "baseball" || state === "pre" ? [] : periodLabels(sport, Math.max(...teams.map((t) => t.linescores.length))),
+    totalLabels: state === "pre" ? [] : sport === "baseball" ? ["R", "H", "E"] : ["T"],
     teams,
-    detail: detail(sport, comp, status, teamsById),
+    detail: detail(sport, comp, status, teamsById, state),
   };
 }
 
@@ -225,7 +296,7 @@ export async function getLiveData(): Promise<LiveData> {
   for (const { league, events } of boards) {
     for (const e of events) {
       const state = e.status?.type?.state;
-      if (state === "in") games.push(liveGame(league, e));
+      if (state === "in") games.push(scoreRow(league, e));
       else if (state === "pre" && Date.parse(e.date) > now && (!next || Date.parse(e.date) < Date.parse(next.date))) {
         next = { league, name: e.shortName ?? e.name, date: e.date };
       }

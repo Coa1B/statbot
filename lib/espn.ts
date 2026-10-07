@@ -160,7 +160,7 @@ export async function leagueLeaders(
 
   const sortCategory = sort.split(".")[0];
   const cats: any[] = data.categories ?? [];
-  const keep = cats.filter((c) => c.name === "general" || c.name === sortCategory);
+  const keep = cats.filter((c) => c.name === "general" || c.name.toLowerCase() === sortCategory.toLowerCase());
   const columns = ["RANK", "PLAYER", "TEAM", ...keep.flatMap((c) => c.names)];
 
   return {

@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AgentEvent, FinalAnswer } from "@/lib/types";
-import type { HomeBoard, HomeData, HomeGame } from "@/lib/home";
-import type { LiveData, LiveGame } from "@/lib/live";
+import type { HomeData, HomeGame } from "@/lib/home";
+import type { LiveData } from "@/lib/live";
+import { Board, ScoreRow } from "./components";
+import { SiteHeader } from "./site-header";
 import { leagueLogo } from "@/lib/logos";
-
-const LEAGUES = ["NBA", "NFL", "MLB", "NHL"];
 
 const TRENDING = [
   "Steph Curry 3s per game in the playoffs 2025",
@@ -117,30 +117,7 @@ export default function StatBot({ home, live }: { home: HomeData; live: LiveData
 
   return (
     <div className="site">
-      <header className="nav">
-        <div className="container nav-inner">
-          <a
-            className="brand"
-            href="/"
-            onClick={(e) => {
-              e.preventDefault();
-              reset();
-            }}
-          >
-            <span className="brand-mark" />
-            StatBot
-          </a>
-          {result && search("compact")}
-          <nav className="leagues">
-            {LEAGUES.map((league) => (
-              <button key={league} onClick={() => ask(`${league} standings`)}>
-                <img className="league-logo" src={leagueLogo(league)} alt="" />
-                {league}
-              </button>
-            ))}
-          </nav>
-        </div>
-      </header>
+      <SiteHeader search={result ? search("compact") : false} onHome={reset} />
 
       <main>{result ? <ResultView result={result} onAsk={ask} /> : <Landing home={home} live={live} search={search("large")} onAsk={ask} />}</main>
 
@@ -270,7 +247,7 @@ function LiveNow({ initial, onAsk }: { initial: LiveData; onAsk: (q: string) => 
       {live.games.length > 0 ? (
         <div className="live-grid">
           {live.games.map((g) => (
-            <LiveCard key={g.id} game={g} onAsk={onAsk} />
+            <ScoreRow key={g.id} game={g} onAsk={onAsk} />
           ))}
         </div>
       ) : (
@@ -287,141 +264,6 @@ function LiveNow({ initial, onAsk }: { initial: LiveData; onAsk: (q: string) => 
         </p>
       )}
     </section>
-  );
-}
-
-function LiveCard({ game, onAsk }: { game: LiveGame; onAsk: (q: string) => void }) {
-  const href = `/game/${game.league}/${game.id}`;
-  const top = Math.max(...game.teams.map((t) => Number(t.score) || 0));
-  // repeat(0, …) is invalid CSS, so only add the period columns when there are some (baseball has none).
-  const columns = [
-    "minmax(0, 1fr)",
-    game.periods.length ? `repeat(${game.periods.length}, 24px)` : "",
-    `repeat(${game.totalLabels.length}, 34px)`,
-  ].join(" ");
-  const detail = game.detail;
-
-  return (
-    <div className="live-card">
-      <a className="live-score-side" href={href}>
-        <div className="live-row live-row-head" style={{ gridTemplateColumns: columns }}>
-          <span className="live-status">
-            {game.status}
-            {game.situation && <span className="muted live-situation"> · {game.situation}</span>}
-          </span>
-          {game.periods.map((p) => (
-            <span key={p}>{p}</span>
-          ))}
-          {game.totalLabels.map((l) => (
-            <span key={l} className="live-total-label">
-              {l}
-            </span>
-          ))}
-        </div>
-        {game.teams.map((t) => (
-          <div
-            key={t.abbr}
-            className={`live-row live-team ${(Number(t.score) || 0) < top ? "trailing" : ""}`}
-            style={{ gridTemplateColumns: columns }}
-          >
-            <span className="live-team-id">
-              {t.logo && <img src={t.logo} alt="" />}
-              <span className="live-team-text">
-                <span className="live-team-name">{t.name}</span>
-                {t.record && <span className="muted live-record">({t.record})</span>}
-              </span>
-            </span>
-            {game.periods.map((p, i) => (
-              <span key={p} className="live-period">
-                {t.linescores[i] ?? ""}
-              </span>
-            ))}
-            {t.totals.map((v, i) => (
-              <span key={i} className={i === 0 ? "live-score" : "live-period"}>
-                {v}
-              </span>
-            ))}
-          </div>
-        ))}
-        <span className="live-card-foot">
-          <img className="league-logo" src={leagueLogo(game.league)} alt="" />
-          {game.league.toUpperCase()}
-          <span className="live-gamecast">Gamecast →</span>
-        </span>
-      </a>
-
-      {detail && (
-        <div className="live-detail">
-          <h3 className="live-detail-title">{detail.title}</h3>
-          {detail.kind === "play" ? (
-            <div className="live-play">
-              {detail.person?.image ? <img className="live-headshot" src={detail.person.image} alt="" /> : null}
-              <p>{detail.text}</p>
-            </div>
-          ) : (
-            <ul className="live-performers">
-              {detail.people.map((p) => (
-                <li key={p.id}>
-                  <button onClick={() => onAsk(`${p.name} stats this season`)}>
-                    {p.image ? <img className="live-headshot" src={p.image} alt="" /> : <span className="live-headshot" />}
-                    <span className="live-performer-text">
-                      {p.label && <span className="live-label">{p.label}</span>}
-                      <span className="live-performer-name">{p.name}</span>
-                      {p.line && <span className="live-line">{p.line}</span>}
-                    </span>
-                    {p.team && <TeamTag team={p.team} logo={p.teamLogo} />}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Board({ board, onAsk }: { board: HomeBoard; onAsk: (q: string) => void }) {
-  const [top, ...rest] = board.players;
-  return (
-    <div className="board">
-      <button className="board-head" onClick={() => onAsk(board.question)}>
-        <span className="board-league">
-          <img className="league-logo" src={leagueLogo(board.league)} alt="" />
-          {board.league}
-        </span>
-        <span className="board-stat">{board.stat}</span>
-        <span className="muted">{board.season}</span>
-      </button>
-      <button className="board-top" onClick={() => onAsk(`${top.name} stats ${board.season}`)}>
-        {top.image && <img src={top.image} alt={top.name} />}
-        <span className="board-top-text">
-          <span className="board-value">{top.value}</span>
-          <span className="board-name">{top.name}</span>
-          <TeamTag team={top.team} logo={top.teamLogo} />
-        </span>
-      </button>
-      <ol start={2}>
-        {rest.map((p) => (
-          <li key={p.name}>
-            <button onClick={() => onAsk(`${p.name} stats ${board.season}`)}>
-              <span className="board-name">{p.name}</span>
-              <TeamTag team={p.team} logo={p.teamLogo} />
-              <span className="board-row-value">{p.value}</span>
-            </button>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
-
-function TeamTag({ team, logo }: { team: string; logo?: string }) {
-  return (
-    <span className="muted team-tag">
-      {logo && <img src={logo} alt="" />}
-      {team}
-    </span>
   );
 }
 

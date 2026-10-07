@@ -106,7 +106,7 @@ main {
   color: var(--muted);
 }
 
-.leagues button {
+.leagues a {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -124,7 +124,8 @@ main {
   height: 14px;
 }
 
-.leagues button:hover {
+.leagues a:hover,
+.leagues a.active {
   color: var(--text);
 }
 
@@ -417,6 +418,11 @@ main {
   font-weight: 500;
 }
 
+.live-status.pre,
+.live-status.post {
+  color: var(--text);
+}
+
 .live-total-label {
   color: var(--text);
 }
@@ -535,7 +541,7 @@ main {
   padding: 0;
 }
 
-.live-performers button {
+.live-performers .ask {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -587,7 +593,7 @@ main {
   font-size: 13px;
 }
 
-.live-performers button:hover .live-performer-name {
+.live-performers .ask:hover .live-performer-name {
   color: var(--accent);
 }
 
@@ -630,7 +636,7 @@ main {
   padding-top: 32px;
 }
 
-.board button {
+.board .ask {
   width: 100%;
   text-align: left;
 }
@@ -737,7 +743,7 @@ main {
   counter-reset: rank 1;
 }
 
-.board li button {
+.board li .ask {
   display: flex;
   align-items: baseline;
   gap: 10px;
@@ -746,11 +752,11 @@ main {
   border-bottom: 1px solid var(--line);
 }
 
-.board li:last-child button {
+.board li:last-child .ask {
   border-bottom: 0;
 }
 
-.board li button::before {
+.board li .ask::before {
   counter-increment: rank;
   content: counter(rank);
   color: var(--muted);
@@ -776,7 +782,7 @@ main {
 }
 
 .board-top:hover .board-name,
-.board li button:hover .board-name {
+.board li .ask:hover .board-name {
   color: var(--accent);
 }
 
@@ -1046,8 +1052,25 @@ tbody tr.total td {
   .container {
     padding: 0 24px;
   }
+  .nav-inner {
+    flex-wrap: wrap;
+    height: auto;
+    padding-top: 12px;
+    padding-bottom: 10px;
+    row-gap: 10px;
+    column-gap: 16px;
+  }
   .leagues {
-    display: none;
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+    gap: 22px;
+    font-size: 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .leagues a {
+    flex-shrink: 0;
   }
   .headshot {
     width: 180px;
@@ -1875,5 +1898,172 @@ tbody tr.total td {
   }
   .game-tabs-live {
     display: none;
+  }
+}
+
+/* League pages */
+
+.league-band {
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+  padding-top: 28px;
+}
+
+.league-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 8px;
+  font-size: 36px;
+  letter-spacing: -0.02em;
+}
+
+.league-title img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+
+.league-tabs {
+  border-bottom: 0;
+  margin-bottom: 0;
+}
+
+.game-tabs a {
+  padding: 16px 14px 14px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+
+.game-tabs a.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.game-tabs a:hover {
+  color: var(--text);
+}
+
+.league-body {
+  padding-top: 28px;
+  padding-bottom: 96px;
+}
+
+.scores-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.scores-step {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  font-size: 22px;
+  line-height: 1;
+  padding-bottom: 3px;
+}
+
+.scores-step:hover {
+  border-color: var(--text);
+}
+
+.scores-step.disabled {
+  opacity: 0.3;
+}
+
+.scores-when {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.scores-when strong {
+  font-size: 18px;
+}
+
+.scores-when .muted {
+  font-size: 13px;
+}
+
+.scores-today {
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.scores-today:hover {
+  border-color: var(--text);
+}
+
+.scores-nav .game-tabs-live {
+  margin-left: auto;
+}
+
+.league-empty {
+  font-size: 16px;
+}
+
+.standings-season {
+  margin: 0 0 16px;
+}
+
+.standings-team {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 230px;
+}
+
+.standings-team img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.standings-team a {
+  font-weight: 600;
+}
+
+.standings-team a:hover {
+  color: var(--accent);
+}
+
+.standings-rank {
+  width: 18px;
+  font-size: 12px;
+  text-align: right;
+}
+
+.standings-clinch {
+  font-size: 12px;
+}
+
+.standings-note {
+  font-size: 12px;
+}
+
+.league-boards .board:nth-child(n + 5) {
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  padding-top: 32px;
+}
+
+@media (max-width: 640px) {
+  .league-title {
+    font-size: 28px;
+  }
+  .standings-team {
+    min-width: 170px;
   }
 }

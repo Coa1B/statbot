@@ -55,7 +55,7 @@ export const STATS: StatDef[] = [
   { id: "rec", sport: "football", re: /\b(?:receptions|catches)\b/, name: "receptions", col: "REC", cats: ["receiving"], log: "receptions", sort: "receiving.receptions", say: (v) => `caught ${v} passes` },
   { id: "sacks", sport: "football", re: /\bsacks\b/, name: "sacks", col: "SACK", cats: ["defensive"], sort: "defensive.sacks", say: (v) => `had ${v} sacks` },
   { id: "tackles", sport: "football", re: /\btackles\b/, name: "tackles", col: "TOT", cats: ["defensive"], sort: "defensive.totalTackles", say: (v) => `had ${v} tackles` },
-  { id: "defInt", sport: "football", re: /\b(?:interceptions|picks|ints)\b/, name: "interceptions", col: "INT", cats: ["defensive"], sort: "defensiveinterceptions.interceptions", say: (v) => `had ${v} interceptions` },
+  { id: "defInt", sport: "football", re: /\b(?:interceptions|picks|ints)\b/, name: "interceptions", col: "INT", cats: ["defensive"], sort: "defensiveInterceptions.interceptions", say: (v) => `had ${v} interceptions` },
   { id: "td", sport: "football", re: /\b(?:touchdowns|tds)\b/, name: "touchdowns", col: "TD", cats: ["scoring"], sort: "scoring.totalTouchdowns", say: (v) => `scored ${v} touchdowns` },
   { id: "yds", sport: "football", re: /\byards\b/, name: "yards", col: "YDS", sort: "passing.passingYards", say: (v) => `had ${v} yards` },
 
